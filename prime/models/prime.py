@@ -21,7 +21,8 @@ class PRIME(torch.nn.Module):
             dropout: float=0.1,
             activation: str='gelu',
             norm_first: bool=False,
-            device="cpu"):
+            beta: float=0.95,
+            device="cuda"):
         """
         Args:
             embedding_dim (int): dim of input embeddings
@@ -34,11 +35,18 @@ class PRIME(torch.nn.Module):
             activation (str, optional): activation func in combiner. Defaults to 'gelu'.
             norm_first (bool, optional): Defaults to False.
                 normalize before applying self-attention?
+            beta (float, optional): Defaults to 0.95.
+                Used to update the prototypes on rolling basis. 
+                - v_(t+1) = beta * v_t + (1-beta) * d
+                - d is the input representation
+                - the updation is done post-fetching
             device (str, optional): Device for embeddings. Defaults to "cpu".
         """
         super(PRIME, self).__init__()
         self.embedding_dim = embedding_dim
         self.num_labels = num_labels
+        self.beta = beta
+        self.device = device
 
         #TODO: Add functionality to make it optional
         self.aux_bank = EmbeddingBank(
@@ -66,7 +74,7 @@ class PRIME(torch.nn.Module):
             norm_first=norm_first
         )
 
-    def encode(self, x: Tensor, ind: Tensor) -> Tensor:
+    def encode(self, x: Tensor, ind: Tensor, return_proptotypes: bool=False) -> Tensor:
         """Enrich the given embedding with auxiliary vectors and prototypes
 
         Args:
@@ -78,8 +86,16 @@ class PRIME(torch.nn.Module):
         """
         v = self.aux_bank[ind].to(self.device)
         z = self.prototype_bank[ind].to(self.device)
-        return self.combiner([x, v, z])
-    
+        if return_proptotypes:
+            return self.combiner([x, v, z]), z
+        else:
+            return self.combiner([x, v, z])
+
+    def update_prototypes(self, z, ind):
+        if self.training:
+            z = torch.nn.functional.normalize(z)
+            self.prototype_bank[ind] = self.beta*self.prototype_bank[ind] + (1-self.beta)*z
+
     def forward(self, x: tuple[Tensor, Tensor]) -> Tensor:
         """Enrich the given embedding with auxiliary vectors and prototypes
 
@@ -91,7 +107,10 @@ class PRIME(torch.nn.Module):
         Returns:
             Tensor: Enriched Tensor
         """
-        return self.encode(*x)
+        x, ind = x
+        x, z = self.encode(x, ind, return_proptotypes=True)
+        self.update_prototypes(z, ind)
+        return x
 
     @property
     def repr_dims(self):
