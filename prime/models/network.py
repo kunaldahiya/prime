@@ -48,4 +48,4 @@ class SiameseNetworkIS(SiameseNetworkIS):
         Z, _Z = self.encode_lbl(
             _to_device(batch['Z'], self.device), 
             _to_device(batch['Y_s'], self.device))
-        return self.similarity(X, Z), self.similarity(X, _Z), X
+        return (self.similarity(X, Z), self.similarity(X, _Z)), X

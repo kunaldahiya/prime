@@ -176,7 +176,7 @@ class RegLoss(_Loss):
         return loss / 2
 
 
-class Loss(torch.nn.Module):
+class TripletLossWReg(torch.nn.Module):
     """ Triplet Margin Loss with Online Hard Negative Mining
     * Applies loss using the hardest negative in the mini-batch
     """
@@ -216,7 +216,7 @@ class Loss(torch.nn.Module):
             inter (float, optional): Defaults to 1.0.
                 Apply loss on both intermediate and final space.
         """
-        super(Loss, self).__init__()
+        super(TripletLossWReg, self).__init__()
         self.criterion = TripletMarginLossOHNM(
             margin=margin,
             margin_min=margin_min,
@@ -262,6 +262,6 @@ class Loss(torch.nn.Module):
         if self.dual > 0:
             loss += self.dual * self.criterion(output_i.T, target.T)
         if self.reg > 0:
-            loss += self.reg * self.regularization(output, output_i, target)
+            loss += self.reg * self.regularization(output, target, output_i)
         return loss
     
