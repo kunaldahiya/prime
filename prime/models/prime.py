@@ -120,7 +120,7 @@ class PRIME(torch.nn.Module):
         self.aux_bank.cluster_and_set_mapping(X)
 
     def setup_prototype_bank(self, X: ndarray) -> None:
-        raise NotImplementedError("")
+        self.prototype_bank.weight.copy_(torch.from_numpy(X))
 
     def __repr__(self):
         s = '{name}('

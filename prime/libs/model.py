@@ -5,6 +5,8 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+from xclib.utils.dense import compute_centroid
+from xclib.utils.dense import _normalize as normalize
 from deepxml.libs.model import EmbeddingModelIS as _EmbeddingModelIS
 
 
@@ -77,7 +79,15 @@ class EmbeddingModelIS(_EmbeddingModelIS):
             encoder=self.net.encode, # only text based embeddings
             feature_t=dataset.label_features._type,
             )
-        self.net.transform_lbl.setup_aux_bank(lbl_emb)
+        self.net.transform_lbl.setup_aux_bank(normalize(lbl_emb))
+
+        doc_emb = self.get_embeddings(
+            data=dataset.features.data,
+            encoder=self.net.encode, # only text based embeddings
+            feature_t=dataset.features._type,
+            )
+        lbl_emb = compute_centroid(doc_emb, dataset.labels.data, reduction='mean')
+        self.net.transform_lbl.setup_prototype_bank(normalize(lbl_emb))
 
     def _setup(self, dataset):
         self._init_memory_bank(dataset)
