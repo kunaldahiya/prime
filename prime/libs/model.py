@@ -72,7 +72,12 @@ class EmbeddingModelIS(_EmbeddingModelIS):
         return embeddings
 
     def _setup_prototype_network(self, dataset):
-        raise NotImplementedError("")
+        lbl_emb = self.get_embeddings(
+            data=dataset.label_features.data,
+            encoder=self.net.encode, # only text based embeddings
+            feature_t=dataset.label_features._type,
+            )
+        self.net.transform_lbl.setup_aux_bank(lbl_emb)
 
     def _setup(self, dataset):
         self._init_memory_bank(dataset)

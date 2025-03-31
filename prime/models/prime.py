@@ -117,7 +117,7 @@ class PRIME(torch.nn.Module):
         return self.embedding_dim
 
     def setup_aux_bank(self, X: ndarray) -> None:
-        raise NotImplementedError("")
+        self.aux_bank.cluster_and_set_mapping(X)
 
     def setup_prototype_bank(self, X: ndarray) -> None:
         raise NotImplementedError("")
