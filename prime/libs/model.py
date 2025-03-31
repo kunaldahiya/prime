@@ -9,6 +9,18 @@ from deepxml.libs.model import EmbeddingModelIS as _EmbeddingModelIS
 
 
 class EmbeddingModelIS(_EmbeddingModelIS):
+    def get_label_representations(
+            self, 
+            dataset, 
+            batch_size=128):
+        return self.get_embeddings(
+            data=dataset.label_features.data,
+            encoder=self.net.encode_lbl,
+            batch_size=batch_size,
+            feature_t=dataset.label_features._type,
+            num_workers=0
+            )
+
     @torch.no_grad()
     def _embeddings(
         self,
@@ -76,4 +88,11 @@ class EmbeddingModelIS(_EmbeddingModelIS):
         Returns:
             Tensor: computed loss
         """
-        raise NotImplementedError("")
+        y_hat, y_hat_i = y_hat
+        y = batch['Y'].to(y_hat.device)
+        mask = batch['Y_mask']
+        return self.criterion(
+            y_hat,
+            y,
+            y_hat_i,
+            mask=mask.to(y_hat.device) if mask is not None else mask)
