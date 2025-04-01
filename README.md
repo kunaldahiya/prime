@@ -10,8 +10,8 @@ Code for "_Prototypical Extreme Multi-label Classification with a Dynamic Margin
 ## ToDo
 
 - [x] Loss
-- [ ] Network Architecture
-- [ ] Network Class
+- [x] Network Architecture
+- [x] Network Class
 - [ ] Model Class
 - [ ] Runner Code
 - [ ] Test
