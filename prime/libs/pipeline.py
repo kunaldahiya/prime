@@ -8,11 +8,11 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from xclib.utils.dense import compute_centroid
 from xclib.utils.dense import _normalize as normalize 
-from deepxml.libs.model import XCModelIS as _XCModelIS
-from deepxml.libs.model import EmbeddingModelIS as _EmbeddingModelIS
+from deepxml.libs.pipeline import XCPipelineIS as _XCPipelineIS
+from deepxml.libs.pipeline import EmbeddingPipelineIS as _EmbeddingPipelineIS
 
 
-class EmbeddingModelIS(_EmbeddingModelIS):
+class EmbeddingPipelineIS(_EmbeddingPipelineIS):
     def get_label_representations(
             self, 
             dataset: torch.utils.data.Dataset, 
@@ -74,12 +74,13 @@ class EmbeddingModelIS(_EmbeddingModelIS):
             embeddings.flush()
         return embeddings
 
-    def _setup_prototype_network(self, dataset):
+    def _setup_prototype_network(self, dataset, batch_size, num_workers=6):
         self.logger.info("Setting up prototype network!")
         lbl_emb = self.get_embeddings(
             data=dataset.label_features.data,
             encoder=self.net.encode, # only text based embeddings
             feature_t=dataset.label_features._type,
+            num_workers=num_workers
             )
         self.net.transform_lbl.setup_aux_bank(normalize(lbl_emb))
 
@@ -87,13 +88,14 @@ class EmbeddingModelIS(_EmbeddingModelIS):
             data=dataset.features.data,
             encoder=self.net.encode, # only text based embeddings
             feature_t=dataset.features._type,
+            num_workers=num_workers
             )
         lbl_emb = compute_centroid(doc_emb, dataset.labels.data, reduction='mean')
         self.net.transform_lbl.setup_prototype_bank(normalize(lbl_emb))
 
-    def _setup(self, dataset):
+    def _setup(self, dataset, batch_size, num_workers=6):
         self._init_memory_bank(dataset)
-        self._setup_prototype_network(dataset)
+        self._setup_prototype_network(dataset, batch_size, num_workers)
 
     def _compute_loss(self, y_hat: tuple, batch: dict) -> Tensor:
         """Compute loss
@@ -115,7 +117,7 @@ class EmbeddingModelIS(_EmbeddingModelIS):
             mask=mask.to(y_hat.device) if mask is not None else mask)
 
 
-class XCModelIS(_XCModelIS):
+class XCPipelineIS(_XCPipelineIS):
     """
     For models that do XC training with implicit sampling
 
