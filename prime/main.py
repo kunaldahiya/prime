@@ -111,10 +111,11 @@ def train(model, args):
     val_fname = {
         'f_features': args.val_feat_fname,
         'f_label_features': args.lbl_feat_fname,
-        'f_labels': args.val_label_fname}
+        'f_labels': args.val_label_fname,
+        'f_label_filter': args.val_filter_fname}
 
     args.sampling_update_steps = list(
-        range(args.sampling_update_interval, 
+        range(min(args.sampling_curr_steps), 
               args.num_epochs, 
               args.sampling_update_interval))
     output = model.fit(
@@ -127,7 +128,7 @@ def train(model, args):
         model_dir=args.model_dir,
         sampling_params=utils.filter_params(args, 'sampling_'),
         feature_t=args.feature_t,
-        validation_interval=args.validation_interval,
+        validate_interval=args.validate_interval,
         num_epochs=args.num_epochs,
         num_workers=args.num_workers,
         batch_size=args.batch_size)
