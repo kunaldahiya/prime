@@ -8,11 +8,23 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from xclib.utils.dense import compute_centroid
 from xclib.utils.dense import _normalize as normalize 
+from .dataset_factory import DatasetFactory
 from deepxml.libs.pipeline import XCPipelineIS as _XCPipelineIS
 from deepxml.libs.pipeline import EmbeddingPipelineIS as _EmbeddingPipelineIS
 
 
 class EmbeddingPipelineIS(_EmbeddingPipelineIS):
+    def _dataset_factory(self):
+        """This function allows the child method to inherit the class
+        to define its own datasets. They can just redefine the class 
+        to load from their local code. Otherwise more code change is required
+
+        Returns:
+            dict: A dataset factory that can return the Dataset class based 
+            on the key (sampling_t)
+        """
+        return DatasetFactory 
+
     def get_label_representations(
             self, 
             dataset: torch.utils.data.Dataset, 

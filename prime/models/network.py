@@ -1,15 +1,11 @@
 from torch import Tensor
-from torch.nn import Module
-from deepxml.models.modules import construct_module
 from deepxml.models.network import SiameseNetworkIS, NetworkIS, _to_device
-from ._modules import MODS
+from .module_factory import ModuleFactory
 
 
 class SiameseNetworkIS(SiameseNetworkIS):
-    def _construct_module(self, config: str={}) -> Module:
-        if config is None:
-            return nn.Identity()
-        return construct_module(config, MODS)
+    def _module_factory(self) -> dict:
+        return ModuleFactory
 
     def _encode_lbl(self, x: tuple) -> Tensor:
         """Encode an item using the given network
@@ -55,6 +51,9 @@ class XCNetworkIS(NetworkIS):
     """
     Class to train extreme classifiers with shared shortlist
     """
+    def _module_factory(self) -> dict:
+        return ModuleFactory
+
     def _encode_lbl(self, x: tuple) -> Tensor:
         """Encode an item using the given network
 
