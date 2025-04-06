@@ -184,6 +184,7 @@ class TripletLossWReg(torch.nn.Module):
             self,
             margin: float = 0.3,
             margin_min: float = 0.0,
+            margin_reg: float = 0.1,
             eps: float = 1.0e-6,
             reduction: str = 'custom',
             num_negatives: int = 100,
@@ -227,7 +228,7 @@ class TripletLossWReg(torch.nn.Module):
             tau=tau
         ) 
         self.regularization = RegLoss(
-            margin=margin,
+            margin=margin_reg,
             reduction=None,
             num_negatives=num_negatives
         )
