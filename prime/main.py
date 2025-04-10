@@ -39,7 +39,7 @@ def construct_network(args):
         raise NotImplementedError("")
 
 
-def construct_model(net, criterion, optim, schedular, shortlister, args):
+def construct_pipeline(net, criterion, optim, schedular, shortlister, args):
     if args.stage == 'siamese':
         return EmbeddingPipelineIS(
             net=net,
@@ -95,14 +95,14 @@ def construct_opt_schedular(net, args):
     return optim, schedular
 
 
-def train(model, args):
+def train(pipeline, args):
     """Train the model with given data
     Arguments
     ----------
-    model: DeepXML
-        train this model (typically DeepXML model)
-    params: NameSpace
-        parameter of the model
+    pipeline: A wrapper object to handle training/ validation etc.
+        train the given model as per given parameters (using .fit())
+    args: NameSpace
+        arguments like data file names, sampling, epochs etc., 
     """
     trn_fname = {
         'f_features': args.trn_feat_fname,
@@ -118,7 +118,7 @@ def train(model, args):
         range(min(args.sampling_curr_steps), 
               args.num_epochs, 
               args.sampling_update_interval))
-    output = model.fit(
+    output = pipeline.fit(
         data_dir=args.data_dir,
         dataset=args.dataset,
         trn_fname=trn_fname,
@@ -131,8 +131,9 @@ def train(model, args):
         validate_interval=args.validate_interval,
         num_epochs=args.num_epochs,
         num_workers=args.num_workers,
+        inference_t=args.inference_t,
         batch_size=args.batch_size)
-    model.save(args.model_dir, args.model_fname)
+    pipeline.save(fname=args.model_fname)
     return output
 
 
@@ -146,14 +147,14 @@ def main(args):
         criterion = construct_loss(args)
         optim, schedular = construct_opt_schedular(net, args)
         shortlister = construct_shortlister(args)
-        model = construct_model(
+        pipeline = construct_pipeline(
             net=net,
             criterion=criterion,
             optim=optim,
             schedular=schedular,
             shortlister=shortlister,
             args=args)
-        train(model, args)
+        train(pipeline, args)
 
 
 if __name__ == "__main__":
