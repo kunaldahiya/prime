@@ -1,6 +1,7 @@
 from typing import Callable
 from torch import Tensor
 from numpy import ndarray
+from torch.utils.data import Dataset
 
 import torch
 import numpy as np
@@ -188,14 +189,18 @@ class XCPipelineIS(_XCPipelineIS):
             embeddings.flush()
         return embeddings
 
-    def _init_classifier(self, dataset, batch_size=128):
+    def _init_classifier(
+            self, 
+            dataset: Dataset, 
+            batch_size: int=128,
+            num_workers: int=6) -> None:
         self.logger.info("Initializing the classifier!")
         lbl_emb = self.get_embeddings(
             data=dataset.label_features.data,
             encoder=self.net.encode_lbl,
             batch_size=batch_size,
             feature_t=dataset.label_features._type,
-            num_workers=0
+            num_workers=num_workers
             )
         self.net.classifier.initialize(
             torch.from_numpy(normalize(lbl_emb)))

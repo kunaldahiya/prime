@@ -3,6 +3,8 @@ from deepxml.libs.schedular import construct_schedular
 from deepxml.libs.evaluater import Evaluater
 from deepxml.libs.shortlist import Shortlist
 
+import os
+import torch
 from libs import utils 
 from models.network import SiameseNetworkIS, XCNetworkIS
 from libs.pipeline import EmbeddingPipelineIS, XCPipelineIS
@@ -25,7 +27,7 @@ def construct_network(args):
             device="cuda", 
             args=args
         )    
-    elif args.stage == 'xc':
+    elif args.stage == 'classifier':
         net = XCNetworkIS.from_config(
             config=args.arch, 
             device="cuda", 
@@ -37,6 +39,20 @@ def construct_network(args):
         return net
     else:
         raise NotImplementedError("")
+
+
+def initialize(args, net):
+    if args.init == 'intermediate':
+        print("Loading intermediate representation.")
+        d = torch.load(
+            os.path.join(os.path.dirname(args.model_dir), "Z.pt"),
+            weights_only=True)
+        net.load_state_dict(d, strict=False)
+    elif args.init == 'auto':
+        print("Automatic initialization.")
+    else:  # trust the random init
+        print("Random initialization.")
+    return net
 
 
 def construct_pipeline(net, criterion, optim, schedular, shortlister, args):
@@ -52,8 +68,8 @@ def construct_pipeline(net, criterion, optim, schedular, shortlister, args):
             result_dir=args.result_dir,
             use_amp=args.use_amp
         )    
-    elif args.stage == 'xc':
-        net = XCPipelineIS(
+    elif args.stage == 'classifier':
+        return XCPipelineIS(
             net=net,
             criterion=criterion,
             optimizer=optim,
@@ -79,7 +95,7 @@ def construct_loss(args):
               dual=args.loss_dual,
               inter=args.loss_inter,
         )    
-    elif args.stage == 'xc':
+    elif args.stage == 'classifier':
         return TripletMarginLossOHNM(
               margin=args.loss_margin,
               reduction=args.loss_reduction,
@@ -114,6 +130,10 @@ def train(pipeline, args):
         'f_labels': args.val_label_fname,
         'f_label_filter': args.val_filter_fname}
 
+    args.cache_doc_representations = False
+    if args.freeze_encoder:
+        args.cache_doc_representations = True
+
     args.sampling_update_steps = list(
         range(min(args.sampling_curr_steps), 
               args.num_epochs, 
@@ -126,6 +146,7 @@ def train(pipeline, args):
         validate=True,
         result_dir=args.result_dir,
         model_dir=args.model_dir,
+        cache_doc_representations=args.cache_doc_representations,
         sampling_params=utils.filter_params(args, 'sampling_'),
         feature_t=args.feature_t,
         validate_interval=args.validate_interval,
@@ -141,6 +162,7 @@ def train(pipeline, args):
 def main(args):
     print(args)
     net = construct_network(args)
+    initialize(args, net)
     net.to("cuda")
     print(net)
     if args.mode == 'train':
