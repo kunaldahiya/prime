@@ -50,12 +50,20 @@ def initialize(args, net):
         net.load_state_dict(d, strict=False)
     elif args.init == 'auto':
         print("Automatic initialization.")
+    elif args.init == 'checkpoint':
+        print("Automatic initialization.")
     else:  # trust the random init
         print("Random initialization.")
     return net
 
 
-def construct_pipeline(net, criterion, optim, schedular, shortlister, args):
+def construct_pipeline(
+        net, 
+        args, 
+        shortlister,
+        criterion=None, 
+        optim=None, 
+        schedular=None):
     if args.stage == 'siamese':
         return EmbeddingPipelineIS(
             net=net,
@@ -140,7 +148,6 @@ def train(pipeline, args):
               args.sampling_update_interval))
     output = pipeline.fit(
         data_dir=args.data_dir,
-        dataset=args.dataset,
         trn_fname=trn_fname,
         val_fname=val_fname,
         validate=True,
@@ -158,14 +165,42 @@ def train(pipeline, args):
     return output
 
 
+def predict(pipeline, args):
+    """Train the model with given data
+    Arguments
+    ----------
+    pipeline: A wrapper object to handle training/ validation etc.
+        train the given model as per given parameters (using .fit())
+    args: NameSpace
+        arguments like data file names, sampling, epochs etc., 
+    """
+    tst_fname = {
+        'f_features': args.tst_feat_fname,
+        'f_label_features': args.lbl_feat_fname,
+        'f_labels': args.tst_label_fname,
+        'f_label_filter': args.tst_filter_fname}
+
+    output = pipeline.predict(
+        data_dir=args.data_dir,
+        fname=tst_fname,
+        data=None,
+        num_workers=args.num_workers,
+        batch_size=args.batch_size,
+        k=args.top_k,
+        feature_t=args.feature_t)
+    utils.save_predictions(
+        output, 
+        os.path.join(args.result_dir, args.pred_fname))
+    return output
+
 
 def main(args):
     print(args)
     net = construct_network(args)
-    initialize(args, net)
     net.to("cuda")
     print(net)
     if args.mode == 'train':
+        initialize(args, net)
         criterion = construct_loss(args)
         optim, schedular = construct_opt_schedular(net, args)
         shortlister = construct_shortlister(args)
@@ -177,6 +212,15 @@ def main(args):
             shortlister=shortlister,
             args=args)
         train(pipeline, args)
+
+    elif args.mode == 'predict' or args.mode == 'inference':
+        shortlister = construct_shortlister(args)
+        pipeline = construct_pipeline(
+            net=net,
+            shortlister=shortlister,
+            args=args)
+        pipeline.load(fname=args.model_fname)
+        predict(pipeline, args)
 
 
 if __name__ == "__main__":

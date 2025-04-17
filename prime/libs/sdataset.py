@@ -3,7 +3,7 @@ from argparse import Namespace
 
 import numpy as np
 from deepxml.libs.sdataset import DatasetIS
-from xclib.evaluation.xc_metrics import compute_inv_propesity
+from xclib.evaluation.xc_metrics import compute_inv_propensity
 
 
 class DatasetIS(DatasetIS):
@@ -69,7 +69,7 @@ class DatasetIS(DatasetIS):
                          n_pos=n_pos
                         )
 
-        self.prob = compute_inv_propesity(
+        self.prob = compute_inv_propensity(
             self.labels.data,
             A=sampling_params.A,
             B=sampling_params.B)
