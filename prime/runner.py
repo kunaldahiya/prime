@@ -157,9 +157,14 @@ def run(work_dir: str, method: str, version: str, seed: str, config: dict):
 if __name__ == "__main__":
     method = sys.argv[1]
     work_dir = sys.argv[2]
-    version = sys.argv[3]
-    config = json.load(open(sys.argv[4]))
+    dataset = sys.argv[3]
+    version = sys.argv[4]
     seed = int(sys.argv[5])
+
+
+    config = json.load(
+        open(os.path.join(os.getcwd(), 'configs', method, f'{dataset}.json')))
+
     g_config = config["global"]
     data_dir = os.path.join(work_dir, 'data', g_config['dataset'])
 
