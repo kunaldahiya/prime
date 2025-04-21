@@ -3,8 +3,71 @@ import sys
 import json
 from argparse import Namespace
 from main import main
+from deepxml.libs import utils
 from deepxml.libs.evaluater import Evaluater
 from xclib.data.data_utils import read_gen_sparse
+
+
+def tokenize_text(
+        data_dir: str, 
+        tokenizer_name: str='bert-base-uncased', 
+        max_len: int | tuple[int]=32, 
+        num_threads: int=1, 
+        do_lower_case: bool=True) -> None:
+    print("Tokenizing text..")
+    #This is to support different lengths for inputs and outputs
+    _inputs = ['trn', 'tst']
+    _outputs = ['lbl']
+    prefixes = _inputs + _outputs
+    if isinstance(max_len, int):
+        max_lens = [max_len] * len(prefixes)
+    else:
+        max_lens = [max_len[0]]*len(_inputs) + [max_len[1]] * len(_outputs)
+
+    for f, l in zip(prefixes, max_lens):
+        utils.tokenize_corpus(
+            corpus=os.path.join(data_dir, f'{f}.raw.txt'), 
+            tokenizer_type=tokenizer_name,
+            tokenization_dir=data_dir,
+            max_len=l, 
+            prefix=f,
+            do_lower_case=do_lower_case,
+            num_threads=num_threads, 
+            batch_size=100000)
+
+
+def prepare_data(data_dir):
+    print("Extracting text and labels from json.gz files..")
+    if 'title' in os.path.basename(data_dir).lower():
+        fields = ['title']
+    else:
+        fields = ["title", 'description']
+
+    num_labels = utils.count_num_labels(os.path.join(data_dir, 'lbl.json.gz'))
+
+    utils.extract_text_labels(
+        in_fname=os.path.join(data_dir, 'lbl.json.gz'), 
+        op_tfname=os.path.join(data_dir, 'lbl.raw.txt'), 
+        op_lfname=None, 
+        fields=fields, 
+        num_labels=num_labels
+    )
+
+    utils.extract_text_labels(
+        in_fname=os.path.join(data_dir, 'tst.json.gz'), 
+        op_tfname=os.path.join(data_dir, 'tst.raw.txt'), 
+        op_lfname=os.path.join(data_dir, 'tst_X_Y.txt'), 
+        fields=fields, 
+        num_labels=num_labels
+    )
+
+    utils.extract_text_labels(
+        in_fname=os.path.join(data_dir, 'trn.json.gz'), 
+        op_tfname=os.path.join(data_dir, 'trn.raw.txt'), 
+        op_lfname=os.path.join(data_dir, 'trn_X_Y.txt'), 
+        fields=fields, 
+        num_labels=num_labels
+    )
 
 
 def evaluate(args):
@@ -26,14 +89,14 @@ def update_args(args, dict):
         setattr(args, key, value)
 
 
-def setup_dirs(args, work_dir, pipeline='PRIME', module='siamese'):
+def setup_dirs(args, work_dir, method='PRIME', module='siamese'):
     args.data_dir = os.path.join(work_dir, 'data', args.dataset)
     arch = args._arch if hasattr(args, '_arch') else args.arch
 
     args.result_dir = os.path.join(
         work_dir, 
         'results', 
-        pipeline, 
+        method, 
         arch, 
         args.dataset, 
         f'v_{args.version}',
@@ -42,7 +105,7 @@ def setup_dirs(args, work_dir, pipeline='PRIME', module='siamese'):
     args.model_dir = os.path.join(
         work_dir, 
         'models', 
-        pipeline, 
+        method, 
         arch, 
         args.dataset, 
         f'v_{args.version}',
@@ -52,7 +115,7 @@ def setup_dirs(args, work_dir, pipeline='PRIME', module='siamese'):
     os.makedirs(args.model_dir, exist_ok=True)
 
 
-def run(work_dir, pipeline, version, seed, config):
+def run(work_dir: str, method: str, version: str, seed: str, config: dict):
 
     # Directory and filenames
     # fetch arguments/parameters like dataset name, A, B etc.
@@ -64,7 +127,7 @@ def run(work_dir, pipeline, version, seed, config):
     args.version = version
     args.stage = 'siamese'
 
-    setup_dirs(args, work_dir, pipeline=pipeline, module='siamese')
+    setup_dirs(args, work_dir, method=method, module='siamese')
 
     # train intermediate representation
     args.mode = 'train'
@@ -82,7 +145,7 @@ def run(work_dir, pipeline, version, seed, config):
     update_args(args, config['classifier'])
     args.stage = 'classifier'
 
-    setup_dirs(args, work_dir, pipeline=pipeline, module='classifier')
+    setup_dirs(args, work_dir, method=method, module='classifier')
     main(args)
 
     args.mode = 'predict'
@@ -92,17 +155,25 @@ def run(work_dir, pipeline, version, seed, config):
 
 
 if __name__ == "__main__":
-    pipeline = sys.argv[1]
+    method = sys.argv[1]
     work_dir = sys.argv[2]
     version = sys.argv[3]
-    config = sys.argv[4]
+    config = json.load(open(sys.argv[4]))
     seed = int(sys.argv[5])
-    if pipeline == "PRIME" or pipeline == "PRIME++":
+    g_config = config["global"]
+    data_dir = os.path.join(work_dir, 'data', g_config['dataset'])
+
+    if not os.path.isfile(os.path.join(data_dir, "lol.raw.txt")):
+        print("Preparing data; Will overwrite!")
+        #prepare_data(data_dir)
+        tokenize_text(data_dir, g_config['tokenizer_name'], g_config['max_length'])  
+
+    if method == "PRIME" or method == "PRIME++":
         run(
-            pipeline=pipeline,
+            method=method,
             work_dir=work_dir,
             version=f"{version}_{seed}",
             seed=seed,
-            config=json.load(open(config)))
+            config=config)
     else:
         raise NotImplementedError("")

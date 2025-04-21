@@ -1,9 +1,17 @@
+from argparse import Namespace
+from torch.nn import Module
+from torch.optim import Optimizer
+from deepxml.libs.pipeline import PipelineBase
+from torch.optim.lr_scheduler import LRScheduler
+from scipy.sparse import spmatrix
+
 from deepxml.libs.optim import construct_optimizer
 from deepxml.libs.schedular import construct_schedular
 from deepxml.libs.evaluater import Evaluater
 from deepxml.libs.shortlist import Shortlist
 
 import os
+import json
 import torch
 from libs import utils 
 from models.network import SiameseNetworkIS, XCNetworkIS
@@ -11,16 +19,17 @@ from libs.pipeline import EmbeddingPipelineIS, XCPipelineIS
 from libs.loss import TripletLossWReg, TripletMarginLossOHNM
 
 
-def construct_shortlister(args):
+def construct_shortlister(args: Namespace) -> Shortlist:
     return Shortlist(
         method=args.ann_method,
-        M=args.M,
-        efC=args.efC,
-        efS=args.efS,
+        space=args.ann_space,
+        M=args.M if hasattr(args, 'M') else 100,
+        efC=args.efC if hasattr(args, 'efC') else 300,
+        efS=args.efS if hasattr(args, 'efS') else args.top_k,
         num_neighbours=args.top_k)
 
 
-def construct_network(args):
+def construct_network(args: Namespace) -> Module:
     if args.stage == 'siamese':
         return SiameseNetworkIS.from_config(
             config=args.arch, 
@@ -41,7 +50,7 @@ def construct_network(args):
         raise NotImplementedError("")
 
 
-def initialize(args, net):
+def initialize(args: Namespace, net: Module) -> None:
     if args.init == 'intermediate':
         print("Loading intermediate representation.")
         d = torch.load(
@@ -58,12 +67,12 @@ def initialize(args, net):
 
 
 def construct_pipeline(
-        net, 
-        args, 
-        shortlister,
-        criterion=None, 
-        optim=None, 
-        schedular=None):
+        net: Module, 
+        args: Namespace, 
+        shortlister: Shortlist,
+        criterion: Module=None, 
+        optim: Optimizer=None, 
+        schedular: LRScheduler=None) -> PipelineBase:
     if args.stage == 'siamese':
         return EmbeddingPipelineIS(
             net=net,
@@ -92,7 +101,7 @@ def construct_pipeline(
         raise NotImplementedError("")
 
 
-def construct_loss(args):
+def construct_loss(args: Namespace) -> Module:
     if args.stage == 'siamese':
         return TripletLossWReg(
               margin=args.loss_margin,
@@ -113,13 +122,15 @@ def construct_loss(args):
         raise NotImplementedError("")
 
 
-def construct_opt_schedular(net, args):
+def construct_opt_schedular(
+        net: Module, 
+        args: Namespace) -> tuple[Optimizer, LRScheduler]:
     optim = construct_optimizer(net, args)
     schedular = construct_schedular(optim, args)
     return optim, schedular
 
 
-def train(pipeline, args):
+def train(pipeline: PipelineBase, args: Namespace) -> None:
     """Train the model with given data
     Arguments
     ----------
@@ -128,6 +139,11 @@ def train(pipeline, args):
     args: NameSpace
         arguments like data file names, sampling, epochs etc., 
     """
+    json.dump(
+        args.__dict__, 
+        open(os.path.join(args.result_dir, 'args.json'), 'w'),
+        indent=4)
+    
     trn_fname = {
         'f_features': args.trn_feat_fname,
         'f_label_features': args.lbl_feat_fname,
@@ -146,7 +162,7 @@ def train(pipeline, args):
         range(min(args.sampling_curr_steps), 
               args.num_epochs, 
               args.sampling_update_interval))
-    output = pipeline.fit(
+    pipeline.fit(
         data_dir=args.data_dir,
         trn_fname=trn_fname,
         val_fname=val_fname,
@@ -162,10 +178,9 @@ def train(pipeline, args):
         inference_t=args.inference_t,
         batch_size=args.batch_size)
     pipeline.save(fname=args.model_fname)
-    return output
 
 
-def predict(pipeline, args):
+def predict(pipeline: PipelineBase, args: Namespace) -> spmatrix:
     """Train the model with given data
     Arguments
     ----------
@@ -194,7 +209,7 @@ def predict(pipeline, args):
     return output
 
 
-def main(args):
+def main(args: Namespace):
     print(args)
     net = construct_network(args)
     net.to("cuda")

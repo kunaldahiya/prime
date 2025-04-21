@@ -28,7 +28,7 @@ class EmbeddingPipelineIS(_EmbeddingPipelineIS):
 
     def get_label_representations(
             self, 
-            dataset: torch.utils.data.Dataset, 
+            dataset: Dataset, 
             batch_size: int=128) -> ndarray:
         return self.get_embeddings(
             data=dataset.label_features.data,
@@ -87,7 +87,11 @@ class EmbeddingPipelineIS(_EmbeddingPipelineIS):
             embeddings.flush()
         return embeddings
 
-    def _setup_prototype_network(self, dataset, batch_size, num_workers=6):
+    def _setup_prototype_network(
+            self, 
+            dataset: Dataset, 
+            batch_size: int, 
+            num_workers: int=6) -> None:
         self.logger.info("Setting up prototype network!")
         lbl_emb = self.get_embeddings(
             data=dataset.label_features.data,
@@ -106,7 +110,11 @@ class EmbeddingPipelineIS(_EmbeddingPipelineIS):
         lbl_emb = compute_centroid(doc_emb, dataset.labels.data, reduction='mean')
         self.net.transform_lbl.setup_prototype_bank(normalize(lbl_emb))
 
-    def _setup(self, dataset, batch_size, num_workers=6):
+    def _setup(
+            self, 
+            dataset: Dataset, 
+            batch_size: int, 
+            num_workers: int=6) -> None:
         self._init_memory_bank(dataset)
         self._setup_prototype_network(dataset, batch_size, num_workers)
 
