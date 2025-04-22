@@ -145,6 +145,7 @@ def run(work_dir: str, method: str, version: str, seed: str, config: dict):
     update_args(args, config['classifier'])
     args.stage = 'classifier'
 
+    args.arch = os.path.join(os.getcwd(), 'configs', f'{args._arch}.clf.json')
     setup_dirs(args, work_dir, method=method, module='classifier')
     main(args)
 
@@ -168,9 +169,9 @@ if __name__ == "__main__":
     g_config = config["global"]
     data_dir = os.path.join(work_dir, 'data', g_config['dataset'])
 
-    if not os.path.isfile(os.path.join(data_dir, "lol.raw.txt")):
+    if not os.path.isfile(os.path.join(data_dir, "trn.raw.txt")):
         print("Preparing data; Will overwrite!")
-        #prepare_data(data_dir)
+        prepare_data(data_dir)
         tokenize_text(data_dir, g_config['tokenizer_name'], g_config['max_length'])  
 
     if method == "PRIME" or method == "PRIME++":

@@ -1,0 +1,36 @@
+{
+    "repr_dims": "768",
+    "encoder": {
+        "stransformer": {
+            "transformer": "msmarco-distilbert-base-v4",
+            "embedding_dims": "768",
+            "dropout": 0
+        }
+    },
+
+    "classifier": {
+        "ovss": {
+            "input_size": 768,
+            "output_size": 131073,
+            "bias": false,
+            "sparse": true,
+            "metric": "cosine"
+        }
+    },
+
+    "transform": {
+        "dropout": {
+            "p": 0.5
+        }
+    },
+
+    "transform_lbl": {
+        "prime": {
+            "embedding_dim": 768,
+            "num_aux_embeddings": 65536,
+            "num_labels": 131073
+        }
+    }
+
+}
+ 

@@ -88,7 +88,7 @@ python runner.py <method> <work_dir> <dataset> <version> <seed>
 - [x] Model Class
 - [x] Runner Code
 - [ ] Respect Seed Value
-- [ ] Dropout for Classification layer
+- [x] Dropout for Classification layer
 - [ ] Support for csv input files
 - [ ] Test
 
