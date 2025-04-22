@@ -1,11 +1,18 @@
 import os
 import sys
 import json
+import torch
 from argparse import Namespace
+import numpy as np
 from main import main
 from deepxml.libs import utils
 from deepxml.libs.evaluater import Evaluater
 from xclib.data.data_utils import read_gen_sparse
+
+
+def set_seed(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 
 def tokenize_text(
@@ -162,6 +169,7 @@ if __name__ == "__main__":
     version = sys.argv[4]
     seed = int(sys.argv[5])
 
+    set_seed(seed)
 
     config = json.load(
         open(os.path.join(os.getcwd(), 'configs', method, f'{dataset}.json')))
