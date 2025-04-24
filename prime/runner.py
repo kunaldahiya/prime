@@ -88,7 +88,7 @@ def evaluate(args):
         read_gen_sparse(os.path.join(args.data_dir, args.tst_label_fname)),
         read_gen_sparse(os.path.join(args.result_dir, args.pred_fname))
     )
-    print(out)
+    return str(out)
 
 
 def update_args(args, dict):
@@ -159,7 +159,10 @@ def run(work_dir: str, method: str, version: str, seed: str, config: dict):
     args.mode = 'predict'
     main(args)
 
-    evaluate(args)
+    result = evaluate(args)
+    # Dump in the file inside result dir
+    with open(os.path.join(os.path.dirname(args.result_dir), 'log_eval.txt'), 'w') as fp:
+        fp.write(result)
 
 
 if __name__ == "__main__":
